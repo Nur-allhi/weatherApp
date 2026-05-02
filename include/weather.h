@@ -2,12 +2,16 @@
 #define WEATHER_H
 
 typedef struct {
-    char city[50];
+    char date[20];
     float temp;
-    int humidity;
-    char description[100];
-} WeatherData;
+    char desc[50];
+} Forecast;
 
+typedef struct {
+    char city[50];
+    long timezone;
+    Forecast daily[5];
+} WeatherData;
 
 int get_weather(const char *city_name, WeatherData *out_data);
 

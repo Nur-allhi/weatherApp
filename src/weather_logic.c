@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <curl/curl.h>
 #include "../include/weather.h"
@@ -7,18 +6,31 @@
 
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, char *data) {
-    strcat(data, ptr);
+    strncat(data, ptr, size * nmemb);
     return size * nmemb;
 }
 
 int get_weather(const char *city_name, WeatherData *out_data) {
     CURL *curl;
     CURLcode res;
-    char url[256];
-    char buffer[2048] = ""; 
+    char url[512];
+    char encoded_city[200] = ""; 
+    char buffer[32768] = ""; 
 
     
-    sprintf(url, "http://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s&units=metric", city_name, API_KEY);
+    int j = 0;
+    for (int i = 0; city_name[i] != '\0'; i++) {
+        if (city_name[i] == ' ') {
+            strcat(encoded_city, "%%20"); 
+            j += 3;
+        } else {
+            encoded_city[j++] = city_name[i];
+            encoded_city[j] = '\0';
+        }
+    }
+
+    
+    sprintf(url, "http://api.openweathermap.org/data/2.5/forecast?q=%s&appid=%s&units=metric", encoded_city, API_KEY);
 
     curl = curl_easy_init();
     if (curl) {
@@ -27,17 +39,41 @@ int get_weather(const char *city_name, WeatherData *out_data) {
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
 
         res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-
-        if (res != CURLE_OK) return 0; 
+        
+        
+        if (res != CURLE_OK) {
+            curl_easy_cleanup(curl);
+            return 0;
+        }
 
         
-        char *temp_ptr = strstr(buffer, "\"temp\":");
-        if (temp_ptr) {
-            sscanf(temp_ptr, "\"temp\":%f", &out_data->temp);
-            strcpy(out_data->city, city_name);
-            return 1; 
+        if (strstr(buffer, "\"cod\":\"404\"") || strstr(buffer, "\"cod\":\"400\"")) {
+            curl_easy_cleanup(curl);
+            return 0; 
         }
+
+        char *tz_ptr = strstr(buffer, "\"timezone\":");
+        if(tz_ptr) sscanf(tz_ptr, "\"timezone\":%ld", &out_data->timezone);
+        
+      
+        char *name_ptr = strstr(buffer, "\"name\":\"");
+        if(name_ptr) sscanf(name_ptr, "\"name\":\"%[^\"]\"", out_data->city);
+
+        
+        char *search_ptr = buffer;
+        for(int i = 0; i < 5; i++) {
+            search_ptr = strstr(search_ptr, "\"temp\":");
+            if(search_ptr) {
+                sscanf(search_ptr, "\"temp\":%f", &out_data->daily[i].temp);
+                
+                for(int k=0; k<8 && search_ptr; k++) {
+                    search_ptr = strstr(search_ptr + 1, "\"main\":");
+                }
+            }
+        }
+
+        curl_easy_cleanup(curl);
+        return 1; 
     }
     return 0; 
 }
