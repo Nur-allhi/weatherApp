@@ -4,7 +4,7 @@
 typedef struct {
     char date[20];
     float temp;
-    char desc[50];
+    char icon[10];
 } Forecast;
 
 typedef struct {

@@ -3,78 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Station</title>
+    <title>Weather Station | Home</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;
         }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 90%;
-            max-width: 400px;
+
+        .container { 
+            background: white; padding: 40px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); 
+            text-align: center; width: 90%; max-width: 400px;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
+
+        h1 { color: #2d3436; margin-bottom: 5px; font-weight: 800; letter-spacing: -1px; }
+        
+        .greeting-box { margin-bottom: 25px; }
+        #greet-msg { color: #667eea; font-weight: 700; font-size: 1.1rem; }
+        #local-time { color: #636e72; font-size: 0.85rem; display: block; margin-top: 5px; }
+
+        input { 
+            width: 100%; padding: 15px; margin-bottom: 20px; border: 2px solid #edf2f7; border-radius: 15px; 
+            font-size: 16px; outline: none; transition: 0.3s; background: #f8fafc; box-sizing: border-box;
         }
-        p {
-            color: #666;
-            margin-bottom: 30px;
+        input:focus { border-color: #667eea; background: white; }
+
+        button { 
+            width: 100%; padding: 15px; background: #667eea; color: white; border: none; border-radius: 15px; 
+            font-size: 16px; font-weight: 700; cursor: pointer; transition: 0.3s;
         }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-sizing: border-box;
-            font-size: 16px;
+        button:hover { background: #764ba2; transform: translateY(-2px); }
+
+        
+        .section-title { font-size: 12px; color: #b2bec3; text-transform: uppercase; letter-spacing: 1px; margin: 25px 0 10px; font-weight: 700; }
+
+        
+        .chip-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+        .chip { 
+            background: #f1f5f9; color: #64748b; padding: 8px 15px; border-radius: 20px; 
+            font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; text-decoration: none;
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background: #0056b3;
-        }
+        .chip:hover { background: #e2e8f0; color: #667eea; }
+        .history-chip { background: #eef2ff; color: #667eea; }
+
+        #loader { display: none; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 15px auto 0; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div class="greeting-box">
+        <span id="greet-msg">Hello!</span>
+        <span id="local-time"></span>
+    </div>
+
     <h1>Weather Station</h1>
-    <p>Built with C & Apache CGI</p>
     
-    <form action="/cgi-bin/weather.cgi" method="GET">
-        <input type="text" name="city" list="city-options" placeholder="Enter City Name (e.g. Dhaka)" required>
-        <datalist id="city-options">
-            <option value="Dhaka">
-            <option value="Chittagong">
-            <option value="Sylhet">
-            <option value="New York">
-            <option value="London">
-            <option value="Tokyo">
+    <form id="weatherForm" action="/cgi-bin/weather.cgi" method="GET">
+        <input type="text" id="cityInput" name="city" placeholder="Enter City Name..." required autocomplete="off" list="cities">
+        <datalist id="cities">
+            <option value="Dhaka"><option value="New York"><option value="London"><option value="Tokyo">
         </datalist>
         <button type="submit">Check Weather</button>
+        <div id="loader"></div>
     </form>
+
+    <div class="section-title">Quick Access</div>
+    <div class="chip-container">
+        <a href="/cgi-bin/weather.cgi?city=Dhaka" class="chip">Dhaka</a>
+        <a href="/cgi-bin/weather.cgi?city=London" class="chip">London</a>
+        <a href="/cgi-bin/weather.cgi?city=New+York" class="chip">New York</a>
+    </div>
+
+    <div id="history-section" style="display: none;">
+        <div class="section-title">Recent Searches</div>
+        <div id="history-list" class="chip-container"></div>
+    </div>
 </div>
+
+<script>
+    
+    function updateGreeting() {
+        const now = new Date();
+        const hrs = now.getHours();
+        let greet = "Good Night";
+        
+        if (hrs >= 5 && hrs < 12) greet = "Good Morning";
+        else if (hrs >= 12 && hrs < 17) greet = "Good Afternoon";
+        else if (hrs >= 17 && hrs < 21) greet = "Good Evening";
+        
+        document.getElementById('greet-msg').innerText = greet;
+        document.getElementById('local-time').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+   
+    const form = document.getElementById('weatherForm');
+    const cityInput = document.getElementById('cityInput');
+    const historySection = document.getElementById('history-section');
+    const historyList = document.getElementById('history-list');
+
+    function saveSearch(city) {
+        let history = JSON.parse(localStorage.getItem('weatherHistory')) || [];
+        if (!history.includes(city)) {
+            history.unshift(city); 
+            if (history.length > 3) history.pop(); 
+            localStorage.setItem('weatherHistory', JSON.stringify(history));
+        }
+    }
+
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('weatherHistory')) || [];
+        if (history.length > 0) {
+            historySection.style.display = 'block';
+            historyList.innerHTML = history.map(city => 
+                `<a href="/cgi-bin/weather.cgi?city=${encodeURIComponent(city)}" class="chip history-chip">${city}</a>`
+            ).join('');
+        }
+    }
+
+    form.onsubmit = function() {
+        document.getElementById('loader').style.display = 'block';
+        saveSearch(cityInput.value.trim());
+    };
+
+  
+    updateGreeting();
+    loadHistory();
+    setInterval(updateGreeting, 60000); 
+</script>
 
 </body>
 </html>
